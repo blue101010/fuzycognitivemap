@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Priorisation de Vulnérabilités avec FCM et Apprentissage NHL
+Vulnerability prioritization with FCM and NHL learning
 """
 
 import numpy as np
 
 
 class FCM:
-    """Carte Cognitive Floue avec apprentissage NHL."""
+    """Fuzzy Cognitive Map with NHL learning support."""
     
     def __init__(self, n_concepts, lambda_=5.0):
         self.n = n_concepts
@@ -16,17 +16,17 @@ class FCM:
         self.A = np.zeros(n_concepts)
     
     def sigmoid(self, x):
-        """Fonction de transfert sigmoide."""
+        """Sigmoid transfer function."""
         return 1 / (1 + np.exp(-self.lambda_ * x))
     
     def set_weights(self, weight_matrix):
-        """Definit la matrice des poids."""
+        """Set the weight matrix."""
         self.W = np.array(weight_matrix)
     
     def infer(self, initial_state, max_iter=50, threshold=1e-4,
               clamp_indices=None):
         """
-        Inference FCM avec support du verrouillage de noeuds.
+        Run FCM inference with optional node clamping.
         """
         self.A = np.array(initial_state, dtype=float)
         history = [self.A.copy()]
@@ -38,7 +38,7 @@ class FCM:
         for iteration in range(max_iter):
             A_new = self.sigmoid(np.dot(self.W.T, self.A))
             
-            # Restaurer les noeuds verrouilles
+            # Restore clamped nodes
             for idx, val in clamped_values.items():
                 A_new[idx] = val
             
@@ -53,22 +53,21 @@ class FCM:
     
     def nhl_learning(self, data_sequences, eta=0.1, gamma=0.9, epochs=100):
         """
-        Apprentissage Hebbien Non-Lineaire (NHL).
-        Reference: Section 13.5, Equation 4 de l'article
+        Nonlinear Hebbian Learning (NHL).
+        Reference: Section 13.5, Equation 4
         
         w_ij^(k+1) = gamma * w_ij^(k) + eta * A_i^(k) * (A_j^(k) - A_j^(k-1))
         
-        Parametres:
+        Parameters:
         -----------
         data_sequences : list of np.array
-            Sequences temporelles d'activations observees
-            Chaque sequence est une matrice (T x n_concepts)
+            Observed activation sequences (each is T x n_concepts)
         eta : float
-            Taux d'apprentissage (defaut: 0.1)
+            Learning rate (default: 0.1)
         gamma : float
-            Facteur de decroissance/memoire (defaut: 0.9)
+            Decay/memory factor (default: 0.9)
         epochs : int
-            Nombre d'epoques d'entrainement
+            Number of training epochs
         """
         print(f"\n[NHL] Debut de l'apprentissage ({epochs} epoques)...")
         
@@ -81,16 +80,16 @@ class FCM:
                     A_curr = sequence[t]
                     delta_A = A_curr - A_prev
                     
-                    # Mise a jour NHL (Equation 4)
+                    # NHL update (Equation 4)
                     for i in range(self.n):
                         for j in range(self.n):
                             if i != j:
                                 delta_w = eta * A_prev[i] * delta_A[j]
                                 self.W[i, j] = gamma * self.W[i, j] + delta_w
-                                # Contrainte [-1, 1]
+                                # Clamp to [-1, 1]
                                 self.W[i, j] = np.clip(self.W[i, j], -1, 1)
                     
-                    # Calcul erreur de prediction
+                    # Prediction error
                     A_pred = self.sigmoid(np.dot(self.W.T, A_prev))
                     total_error += np.mean((A_curr - A_pred) ** 2)
             
@@ -103,20 +102,20 @@ class FCM:
 
 def generate_training_data(n_samples=50):
     """
-    Genere des donnees d'entrainement synthetiques.
-    Simule des cas historiques de vulnerabilites avec priorites connues.
+    Generate synthetic training data.
+    Simulates historical vulnerability cases with known priorities.
     
-    En pratique, ces donnees proviendraient de:
-    - Historique de remediations
-    - Jugements d'experts sur des cas passes
-    - Incidents de securite documentes
+    In practice, the data would come from:
+    - Remediation history
+    - Expert judgment on past cases
+    - Documented security incidents
     """
     print("\n[DATA] Generation de donnees d'entrainement...")
     
     sequences = []
     
     for i in range(n_samples):
-        # Etat initial aleatoire (caracteristiques de vulnerabilite)
+        # Random initial state (vulnerability characteristics)
         cvss = np.random.uniform(0.3, 1.0)
         epss = np.random.uniform(0.0, 1.0)
         exploit = np.random.uniform(0.0, 1.0)
@@ -126,8 +125,8 @@ def generate_training_data(n_samples=50):
         exposure = np.random.uniform(0.1, 1.0)
         controls = np.random.uniform(0.1, 0.9)
         
-        # Priorite cible (simulee selon une logique metier)
-        # Haute priorite si: CVSS eleve + EPSS eleve + exploit mature + criticite elevee
+        # Target priority (business logic simulation)
+        # High priority if: high CVSS + high EPSS + mature exploit + high criticality
         priority_target = (
             0.25 * cvss +
             0.25 * epss +
@@ -135,11 +134,11 @@ def generate_training_data(n_samples=50):
             0.20 * criticality +
             0.10 * exposure -
             0.15 * controls +
-            np.random.normal(0, 0.05)  # Bruit
+            np.random.normal(0, 0.05)  # Noise
         )
         priority_target = np.clip(priority_target, 0, 1)
         
-        # Sequence: etat initial -> etat final (convergence simulee)
+        # Sequence: initial state -> final state (simulated convergence)
         state_initial = np.array([
             cvss, epss, exploit, complexity, chaining,
             criticality, exposure, controls, 0.0
@@ -150,10 +149,10 @@ def generate_training_data(n_samples=50):
             criticality, exposure, controls, priority_target
         ])
         
-        # Creer une sequence de transition (3 etapes)
+        # Build a three-step transition sequence
         sequence = np.array([
             state_initial,
-            (state_initial + state_final) / 2,  # Etape intermediaire
+            (state_initial + state_final) / 2,  # Intermediate step
             state_final
         ])
         
@@ -165,7 +164,7 @@ def generate_training_data(n_samples=50):
 
 def prioritize_vulnerabilities(vulnerabilities, fcm_model):
     """
-    Priorise une liste de vulnerabilites avec FCM.
+    Prioritize a list of vulnerabilities with FCM.
     """
     results = []
     
@@ -182,7 +181,7 @@ def prioritize_vulnerabilities(vulnerabilities, fcm_model):
             0.0
         ])
         
-        # Verrouillage des noeuds d'entree (C0-C7)
+        # Clamp input nodes (C0-C7)
         clamped_nodes = list(range(len(initial_state) - 1))
         final_state, history = fcm_model.infer(
             initial_state,
@@ -203,17 +202,17 @@ def prioritize_vulnerabilities(vulnerabilities, fcm_model):
 
 def main():
     """
-    Pipeline complet: Apprentissage NHL + Priorisation
+    Full pipeline: NHL training + prioritization
     """
     print("=" * 65)
     print("  FCM avec Apprentissage NHL pour Priorisation de Vulnerabilites")
     print("=" * 65)
     
-    # 1. Creation du modele FCM
+    # 1. Build the FCM model
     print("\n[1] Creation du modele FCM (9 concepts)...")
     fcm = FCM(n_concepts=9, lambda_=5.0)
     
-    # 2. Initialisation avec poids experts (point de depart)
+    # 2. Initialize with expert weights (starting point)
     print("[2] Initialisation avec matrice de poids experte...")
     W_init = np.array([
         [0.0, 0.3, 0.2, 0.0, 0.1, 0.0, 0.0, 0.0, 0.7],
@@ -228,19 +227,19 @@ def main():
     ])
     fcm.set_weights(W_init)
     
-    # 3. Generer donnees d'entrainement
+    # 3. Generate training data
     training_data = generate_training_data(n_samples=100)
     
-    # 4. Apprentissage NHL
+    # 4. NHL learning
     print("\n[3] Apprentissage NHL des poids...")
     W_learned = fcm.nhl_learning(
         training_data,
-        eta=0.05,      # Taux d'apprentissage
-        gamma=0.95,    # Facteur de memoire
+        eta=0.05,      # Learning rate
+        gamma=0.95,    # Memory factor
         epochs=100
     )
     
-    # 5. Afficher les poids appris vs initiaux
+    # 5. Compare learned weights vs. initial weights
     print("\n[4] Comparaison des poids (colonne Priorite C8):")
     print("-" * 50)
     concepts = ["CVSS", "EPSS", "Exploit", "Complx", 
@@ -250,7 +249,7 @@ def main():
     for i, name in enumerate(concepts):
         print(f"{name:<10} {W_init[i, 8]:>10.3f} {W_learned[i, 8]:>12.3f}")
     
-    # 6. Vulnerabilites a prioriser
+    # 6. Vulnerabilities to prioritize
     print("\n[5] Priorisation des vulnerabilites...")
     vulns = [
         {'cve_id': 'CVE-2024-0001', 'cvss': 9.8, 'epss': 0.95,
@@ -269,7 +268,7 @@ def main():
     
     ranked = prioritize_vulnerabilities(vulns, fcm)
     
-    # 7. Resultats
+    # 7. Results
     print("\n" + "=" * 65)
     print("       RESULTATS DE PRIORISATION (FCM + NHL)")
     print("=" * 65)
